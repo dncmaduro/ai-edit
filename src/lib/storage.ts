@@ -102,6 +102,10 @@ export function getProjectOutputDir(projectId: string): string {
   return getProjectSubdirectory(projectId, "output");
 }
 
+export function getProjectManifestPath(projectId: string): string {
+  return path.join(getProjectDir(projectId), "manifest.json");
+}
+
 async function ensureDirectoryInsideRoot(directoryPath: string, rootPath: string): Promise<void> {
   await mkdir(directoryPath, { recursive: true });
 
