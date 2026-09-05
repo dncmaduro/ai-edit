@@ -7,11 +7,20 @@ import { getProjectDir, getProjectManifestPath } from "@/lib/storage";
 
 export type MediaProcessingStatus = "importing" | "processing" | "ready" | "failed";
 export type TranscriptionStatus = "pending" | "processing" | "ready" | "failed" | "not_applicable";
+export type SegmentationStatus = "pending" | "processing" | "ready" | "failed" | "not_applicable";
 
 export interface TranscriptionState {
   status: TranscriptionStatus;
   path: string | null;
   model: string | null;
+  error: string | null;
+}
+
+export interface SegmentationState {
+  status: SegmentationStatus;
+  scenesPath: string | null;
+  segmentsPath: string | null;
+  mode: "visual+transcript" | "visual-only" | null;
   error: string | null;
 }
 
@@ -31,6 +40,7 @@ export interface ProjectMediaEntry {
   status: MediaProcessingStatus;
   error: string | null;
   transcription?: TranscriptionState;
+  segmentation?: SegmentationState;
 }
 
 export interface ProjectManifest {
@@ -107,6 +117,16 @@ function isTranscriptionStatus(value: unknown): value is TranscriptionStatus {
   );
 }
 
+function isSegmentationStatus(value: unknown): value is SegmentationStatus {
+  return (
+    value === "pending" ||
+    value === "processing" ||
+    value === "ready" ||
+    value === "failed" ||
+    value === "not_applicable"
+  );
+}
+
 function isTranscriptionState(value: unknown): value is TranscriptionState {
   if (!value || typeof value !== "object") {
     return false;
@@ -118,6 +138,21 @@ function isTranscriptionState(value: unknown): value is TranscriptionState {
     (transcription.path === null || isRelativeProjectPath(transcription.path)) &&
     isNullableString(transcription.model) &&
     isNullableString(transcription.error)
+  );
+}
+
+function isSegmentationState(value: unknown): value is SegmentationState {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const segmentation = value as Record<string, unknown>;
+  return (
+    isSegmentationStatus(segmentation.status) &&
+    (segmentation.scenesPath === null || isRelativeProjectPath(segmentation.scenesPath)) &&
+    (segmentation.segmentsPath === null || isRelativeProjectPath(segmentation.segmentsPath)) &&
+    (segmentation.mode === null || segmentation.mode === "visual+transcript" || segmentation.mode === "visual-only") &&
+    isNullableString(segmentation.error)
   );
 }
 
@@ -142,7 +177,8 @@ function isProjectMediaEntry(value: unknown): value is ProjectMediaEntry {
     typeof media.hasAudio === "boolean" &&
     isMediaStatus(media.status) &&
     isNullableString(media.error) &&
-    (media.transcription === undefined || isTranscriptionState(media.transcription))
+    (media.transcription === undefined || isTranscriptionState(media.transcription)) &&
+    (media.segmentation === undefined || isSegmentationState(media.segmentation))
   );
 }
 

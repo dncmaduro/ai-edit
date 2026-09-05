@@ -1,5 +1,6 @@
 import { isFfmpegAvailable, isFfprobeAvailable } from "@/lib/media/ffmpeg";
 import { getProjectRoot } from "@/lib/storage";
+import { checkSceneDetectionRuntime } from "@/lib/segmentation/pyscenedetect";
 import { checkTranscriptionRuntime } from "@/lib/transcription/mlx-whisper";
 import { stat } from "node:fs/promises";
 
@@ -16,18 +17,20 @@ async function hasProjectRoot(): Promise<boolean> {
 }
 
 export async function GET() {
-  const [projectRoot, ffmpeg, ffprobe, transcription] = await Promise.all([
+  const [projectRoot, ffmpeg, ffprobe, transcription, sceneDetection] = await Promise.all([
     hasProjectRoot(),
     isFfmpegAvailable(),
     isFfprobeAvailable(),
     checkTranscriptionRuntime(),
+    checkSceneDetectionRuntime(),
   ]);
 
   return Response.json({
-    status: projectRoot && ffmpeg && ffprobe && transcription.available ? "ok" : "degraded",
+    status: projectRoot && ffmpeg && ffprobe && transcription.available && sceneDetection.available ? "ok" : "degraded",
     projectRoot,
     ffmpeg,
     ffprobe,
     transcription,
+    sceneDetection,
   });
 }

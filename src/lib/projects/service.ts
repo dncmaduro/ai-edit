@@ -183,6 +183,13 @@ export async function importProjectMedia(
     status: "importing",
     error: null,
     transcription: { status: "pending", path: null, model: null, error: null },
+    segmentation: {
+      status: "pending",
+      scenesPath: null,
+      segmentsPath: null,
+      mode: null,
+      error: null,
+    },
   };
 
   await addProjectMediaEntry(projectId, initialMedia);
@@ -216,6 +223,13 @@ export async function importProjectMedia(
       transcription: metadata.hasAudio
         ? { status: "pending", path: null, model: null, error: null }
         : { status: "not_applicable", path: null, model: null, error: null },
+      segmentation: {
+        status: "pending",
+        scenesPath: null,
+        segmentsPath: null,
+        mode: null,
+        error: null,
+      },
     };
     await updateProjectMediaEntry(projectId, mediaId, () => readyMedia);
     console.info("[media] ready", { projectId, mediaId });
