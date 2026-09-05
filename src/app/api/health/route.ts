@@ -1,5 +1,6 @@
 import { isFfmpegAvailable, isFfprobeAvailable } from "@/lib/media/ffmpeg";
 import { getProjectRoot } from "@/lib/storage";
+import { checkTranscriptionRuntime } from "@/lib/transcription/mlx-whisper";
 import { stat } from "node:fs/promises";
 
 export const runtime = "nodejs";
@@ -15,16 +16,18 @@ async function hasProjectRoot(): Promise<boolean> {
 }
 
 export async function GET() {
-  const [projectRoot, ffmpeg, ffprobe] = await Promise.all([
+  const [projectRoot, ffmpeg, ffprobe, transcription] = await Promise.all([
     hasProjectRoot(),
     isFfmpegAvailable(),
     isFfprobeAvailable(),
+    checkTranscriptionRuntime(),
   ]);
 
   return Response.json({
-    status: projectRoot && ffmpeg && ffprobe ? "ok" : "degraded",
+    status: projectRoot && ffmpeg && ffprobe && transcription.available ? "ok" : "degraded",
     projectRoot,
     ffmpeg,
     ffprobe,
+    transcription,
   });
 }

@@ -6,6 +6,14 @@ import path from "node:path";
 import { getProjectDir, getProjectManifestPath } from "@/lib/storage";
 
 export type MediaProcessingStatus = "importing" | "processing" | "ready" | "failed";
+export type TranscriptionStatus = "pending" | "processing" | "ready" | "failed" | "not_applicable";
+
+export interface TranscriptionState {
+  status: TranscriptionStatus;
+  path: string | null;
+  model: string | null;
+  error: string | null;
+}
 
 export interface ProjectMediaEntry {
   id: string;
@@ -22,6 +30,7 @@ export interface ProjectMediaEntry {
   hasAudio: boolean;
   status: MediaProcessingStatus;
   error: string | null;
+  transcription?: TranscriptionState;
 }
 
 export interface ProjectManifest {
@@ -88,6 +97,30 @@ function isMediaStatus(value: unknown): value is MediaProcessingStatus {
   return value === "importing" || value === "processing" || value === "ready" || value === "failed";
 }
 
+function isTranscriptionStatus(value: unknown): value is TranscriptionStatus {
+  return (
+    value === "pending" ||
+    value === "processing" ||
+    value === "ready" ||
+    value === "failed" ||
+    value === "not_applicable"
+  );
+}
+
+function isTranscriptionState(value: unknown): value is TranscriptionState {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const transcription = value as Record<string, unknown>;
+  return (
+    isTranscriptionStatus(transcription.status) &&
+    (transcription.path === null || isRelativeProjectPath(transcription.path)) &&
+    isNullableString(transcription.model) &&
+    isNullableString(transcription.error)
+  );
+}
+
 function isProjectMediaEntry(value: unknown): value is ProjectMediaEntry {
   if (!value || typeof value !== "object") {
     return false;
@@ -108,7 +141,8 @@ function isProjectMediaEntry(value: unknown): value is ProjectMediaEntry {
     isNullableString(media.audioCodec) &&
     typeof media.hasAudio === "boolean" &&
     isMediaStatus(media.status) &&
-    isNullableString(media.error)
+    isNullableString(media.error) &&
+    (media.transcription === undefined || isTranscriptionState(media.transcription))
   );
 }
 

@@ -184,3 +184,42 @@ export async function resolveProjectMediaFile(filePath: string): Promise<string>
 
   return resolvedFile;
 }
+
+export async function resolveProjectRelativeFile(
+  projectId: string,
+  relativePath: string,
+): Promise<string> {
+  if (
+    !relativePath ||
+    path.isAbsolute(relativePath) ||
+    relativePath.split(/[\\/]/).includes("..")
+  ) {
+    throw new StorageError("Project file path must be a safe relative path.");
+  }
+
+  const projectDir = getProjectDir(projectId);
+  const resolvedCandidate = path.resolve(projectDir, relativePath);
+  if (!isPathInside(projectDir, resolvedCandidate)) {
+    throw new StorageError("Project file path resolves outside its project directory.");
+  }
+
+  let resolvedProjectDir: string;
+  let resolvedFile: string;
+  try {
+    resolvedProjectDir = await realpath(projectDir);
+    resolvedFile = await realpath(resolvedCandidate);
+  } catch {
+    throw new StorageError("Project file does not exist or cannot be accessed.");
+  }
+
+  if (!isPathInside(resolvedProjectDir, resolvedFile)) {
+    throw new StorageError("Project file path must resolve inside its project directory.");
+  }
+
+  const fileInfo = await stat(resolvedFile);
+  if (!fileInfo.isFile()) {
+    throw new StorageError("Project file path must point to a regular file.");
+  }
+
+  return resolvedFile;
+}
