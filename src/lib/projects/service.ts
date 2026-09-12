@@ -190,6 +190,14 @@ export async function importProjectMedia(
       mode: null,
       error: null,
     },
+    semanticAnalysis: {
+      status: "pending",
+      path: null,
+      provider: null,
+      model: null,
+      promptVersion: null,
+      error: null,
+    },
   };
 
   await addProjectMediaEntry(projectId, initialMedia);
@@ -228,6 +236,14 @@ export async function importProjectMedia(
         scenesPath: null,
         segmentsPath: null,
         mode: null,
+        error: null,
+      },
+      semanticAnalysis: {
+        status: "pending",
+        path: null,
+        provider: null,
+        model: null,
+        promptVersion: null,
         error: null,
       },
     };

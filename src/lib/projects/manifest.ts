@@ -8,6 +8,7 @@ import { getProjectDir, getProjectManifestPath } from "@/lib/storage";
 export type MediaProcessingStatus = "importing" | "processing" | "ready" | "failed";
 export type TranscriptionStatus = "pending" | "processing" | "ready" | "failed" | "not_applicable";
 export type SegmentationStatus = "pending" | "processing" | "ready" | "failed" | "not_applicable";
+export type SemanticAnalysisStatus = "pending" | "processing" | "ready" | "partial" | "failed" | "not_applicable";
 
 export interface TranscriptionState {
   status: TranscriptionStatus;
@@ -21,6 +22,15 @@ export interface SegmentationState {
   scenesPath: string | null;
   segmentsPath: string | null;
   mode: "visual+transcript" | "visual-only" | null;
+  error: string | null;
+}
+
+export interface SemanticAnalysisState {
+  status: SemanticAnalysisStatus;
+  path: string | null;
+  provider: "gemini" | null;
+  model: string | null;
+  promptVersion: number | null;
   error: string | null;
 }
 
@@ -41,6 +51,7 @@ export interface ProjectMediaEntry {
   error: string | null;
   transcription?: TranscriptionState;
   segmentation?: SegmentationState;
+  semanticAnalysis?: SemanticAnalysisState;
 }
 
 export interface ProjectManifest {
@@ -127,6 +138,17 @@ function isSegmentationStatus(value: unknown): value is SegmentationStatus {
   );
 }
 
+function isSemanticAnalysisStatus(value: unknown): value is SemanticAnalysisStatus {
+  return (
+    value === "pending" ||
+    value === "processing" ||
+    value === "ready" ||
+    value === "partial" ||
+    value === "failed" ||
+    value === "not_applicable"
+  );
+}
+
 function isTranscriptionState(value: unknown): value is TranscriptionState {
   if (!value || typeof value !== "object") {
     return false;
@@ -156,6 +178,25 @@ function isSegmentationState(value: unknown): value is SegmentationState {
   );
 }
 
+function isSemanticAnalysisState(value: unknown): value is SemanticAnalysisState {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const semanticAnalysis = value as Record<string, unknown>;
+  return (
+    isSemanticAnalysisStatus(semanticAnalysis.status) &&
+    (semanticAnalysis.path === null || isRelativeProjectPath(semanticAnalysis.path)) &&
+    (semanticAnalysis.provider === null || semanticAnalysis.provider === "gemini") &&
+    isNullableString(semanticAnalysis.model) &&
+    (semanticAnalysis.promptVersion === null ||
+      (typeof semanticAnalysis.promptVersion === "number" &&
+        Number.isInteger(semanticAnalysis.promptVersion) &&
+        semanticAnalysis.promptVersion > 0)) &&
+    isNullableString(semanticAnalysis.error)
+  );
+}
+
 function isProjectMediaEntry(value: unknown): value is ProjectMediaEntry {
   if (!value || typeof value !== "object") {
     return false;
@@ -178,7 +219,8 @@ function isProjectMediaEntry(value: unknown): value is ProjectMediaEntry {
     isMediaStatus(media.status) &&
     isNullableString(media.error) &&
     (media.transcription === undefined || isTranscriptionState(media.transcription)) &&
-    (media.segmentation === undefined || isSegmentationState(media.segmentation))
+    (media.segmentation === undefined || isSegmentationState(media.segmentation)) &&
+    (media.semanticAnalysis === undefined || isSemanticAnalysisState(media.semanticAnalysis))
   );
 }
 

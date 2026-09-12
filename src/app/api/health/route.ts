@@ -1,6 +1,7 @@
 import { isFfmpegAvailable, isFfprobeAvailable } from "@/lib/media/ffmpeg";
 import { getProjectRoot } from "@/lib/storage";
 import { checkSceneDetectionRuntime } from "@/lib/segmentation/pyscenedetect";
+import { getSemanticAnalysisRuntimeStatus } from "@/lib/semantic/config";
 import { checkTranscriptionRuntime } from "@/lib/transcription/mlx-whisper";
 import { stat } from "node:fs/promises";
 
@@ -32,5 +33,6 @@ export async function GET() {
     ffprobe,
     transcription,
     sceneDetection,
+    semanticAnalysis: getSemanticAnalysisRuntimeStatus(),
   });
 }
