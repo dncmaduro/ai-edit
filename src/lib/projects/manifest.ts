@@ -9,6 +9,7 @@ export type MediaProcessingStatus = "importing" | "processing" | "ready" | "fail
 export type TranscriptionStatus = "pending" | "processing" | "ready" | "failed" | "not_applicable";
 export type SegmentationStatus = "pending" | "processing" | "ready" | "failed" | "not_applicable";
 export type SemanticAnalysisStatus = "pending" | "processing" | "ready" | "partial" | "failed" | "not_applicable";
+export type PlanningStatus = "pending" | "processing" | "ready" | "failed";
 
 export interface TranscriptionState {
   status: TranscriptionStatus;
@@ -31,6 +32,17 @@ export interface SemanticAnalysisState {
   provider: "gemini" | null;
   model: string | null;
   promptVersion: number | null;
+  error: string | null;
+}
+
+export interface PlanningState {
+  status: PlanningStatus;
+  path: string | null;
+  templateId: string | null;
+  templateVersion: number | null;
+  model: string | null;
+  promptVersion: number | null;
+  inputHash: string | null;
   error: string | null;
 }
 
@@ -59,6 +71,7 @@ export interface ProjectManifest {
   createdAt: string;
   updatedAt: string;
   media: ProjectMediaEntry[];
+  planning?: PlanningState;
 }
 
 export class ManifestError extends Error {
@@ -149,6 +162,21 @@ function isSemanticAnalysisStatus(value: unknown): value is SemanticAnalysisStat
   );
 }
 
+function isPlanningState(value: unknown): value is PlanningState {
+  if (!value || typeof value !== "object") return false;
+  const planning = value as Record<string, unknown>;
+  return (
+    (planning.status === "pending" || planning.status === "processing" || planning.status === "ready" || planning.status === "failed") &&
+    (planning.path === null || isRelativeProjectPath(planning.path)) &&
+    isNullableString(planning.templateId) &&
+    (planning.templateVersion === null || (typeof planning.templateVersion === "number" && Number.isInteger(planning.templateVersion) && planning.templateVersion > 0)) &&
+    isNullableString(planning.model) &&
+    (planning.promptVersion === null || (typeof planning.promptVersion === "number" && Number.isInteger(planning.promptVersion) && planning.promptVersion > 0)) &&
+    isNullableString(planning.inputHash) &&
+    isNullableString(planning.error)
+  );
+}
+
 function isTranscriptionState(value: unknown): value is TranscriptionState {
   if (!value || typeof value !== "object") {
     return false;
@@ -235,7 +263,8 @@ export function assertValidProjectManifest(value: unknown): asserts value is Pro
     !isIsoTimestamp(manifest.createdAt) ||
     !isIsoTimestamp(manifest.updatedAt) ||
     !Array.isArray(manifest.media) ||
-    !manifest.media.every(isProjectMediaEntry)
+    !manifest.media.every(isProjectMediaEntry) ||
+    (manifest.planning !== undefined && !isPlanningState(manifest.planning))
   ) {
     throw new ManifestError("Project manifest has an invalid shape.");
   }
@@ -338,6 +367,18 @@ export async function updateProjectMediaEntry(
       ...manifest,
       media: manifest.media.map((entry, index) => (index === mediaIndex ? media : entry)),
     };
+    await writeProjectManifest(projectId, nextManifest);
+    return { ...nextManifest, updatedAt: new Date().toISOString() };
+  });
+}
+
+export async function updateProjectPlanningState(
+  projectId: string,
+  update: (planning: PlanningState | undefined) => PlanningState,
+): Promise<ProjectManifest> {
+  return withManifestWriteLock(projectId, async () => {
+    const manifest = await readProjectManifest(projectId);
+    const nextManifest = { ...manifest, planning: update(manifest.planning) };
     await writeProjectManifest(projectId, nextManifest);
     return { ...nextManifest, updatedAt: new Date().toISOString() };
   });
